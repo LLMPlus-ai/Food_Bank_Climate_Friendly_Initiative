@@ -1,6 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
+from flask import Flask, render_template, request, jsonify
 from datetime import datetime
 import os
 import sys
@@ -37,159 +35,99 @@ except Exception as e:
     logger.error(f"Failed to connect to Supabase: {str(e)}")
     raise
 
-# Database configuration
-if os.environ.get('VERCEL_ENV') == 'production':
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///foodbank.db')
-
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['PROPAGATE_EXCEPTIONS'] = True
-
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-
-class PersonaCard(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    age = db.Column(db.Integer)
-    occupation = db.Column(db.String(100))
-    background = db.Column(db.Text)
-    challenges = db.Column(db.Text)
-    dietary_preferences = db.Column(db.String(100))
-    household_size = db.Column(db.Integer)
-    location = db.Column(db.String(100))
-    climate_impact_concerns = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class Guidebook(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    steps = db.Column(db.Text)
-    estimated_time = db.Column(db.String(50))
-    difficulty_level = db.Column(db.String(20))
-    key_considerations = db.Column(db.Text)
-    resources_needed = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class ImplementationPlan(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    guidebook_id = db.Column(db.Integer, db.ForeignKey('guidebook.id'))
-    timeline = db.Column(db.String(100))
-    stakeholders = db.Column(db.Text)
-    resources = db.Column(db.Text)
-    success_metrics = db.Column(db.Text)
-    status = db.Column(db.String(20))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class CommunityFeedback(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    implementation_plan_id = db.Column(db.Integer, db.ForeignKey('implementation_plan.id'))
-    feedback_text = db.Column(db.Text)
-    rating = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-class ClimateImpact(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    implementation_plan_id = db.Column(db.Integer, db.ForeignKey('implementation_plan.id'))
-    metric_name = db.Column(db.String(100))
-    value = db.Column(db.Float)
-    unit = db.Column(db.String(20))
-    date_measured = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 # Error handling
 @app.errorhandler(500)
 def internal_error(error):
-    app.logger.error(f'Server Error: {error}')
+    logger.error(f'Server Error: {error}')
     return render_template('error.html', error=error), 500
 
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('error.html', error=error), 404
 
-def init_db():
+def init_sample_data():
     try:
-        with app.app_context():
-            # Create all tables
-            db.create_all()
-            
-            # Check if data exists in Supabase
-            personas_response = supabase.table('persona_cards').select("count").execute()
-            if not personas_response.data or personas_response.data[0]['count'] == 0:
-                # Add sample personas
-                personas_data = [
-                    {
-                        "name": "Sarah Johnson",
-                        "age": 35,
-                        "occupation": "Single Mother",
-                        "background": "Works two part-time jobs to support her family",
-                        "challenges": "Limited time for meal preparation, tight budget",
-                        "dietary_preferences": "Vegetarian",
-                        "household_size": 3,
-                        "location": "Urban",
-                        "climate_impact_concerns": "Interested in reducing food waste"
-                    },
-                    {
-                        "name": "Emma Thompson",
-                        "age": 42,
-                        "occupation": "Food Bank Manager",
-                        "background": "10 years experience in food bank operations",
-                        "challenges": "Balancing nutritional needs with available donations",
-                        "dietary_preferences": "No restrictions",
-                        "household_size": 4,
-                        "location": "Suburban",
-                        "climate_impact_concerns": "Focused on sustainable food sourcing"
-                    },
-                    {
-                        "name": "David Kumar",
-                        "age": 28,
-                        "occupation": "Graduate Student",
-                        "background": "International student on limited budget",
-                        "challenges": "Dietary restrictions, unfamiliar with local food system",
-                        "dietary_preferences": "Vegan",
-                        "household_size": 1,
-                        "location": "Urban",
-                        "climate_impact_concerns": "Passionate about reducing carbon footprint"
-                    }
-                ]
-                supabase.table('persona_cards').insert(personas_data).execute()
-                logger.info("Sample personas added to Supabase")
-            
-            guidebooks_response = supabase.table('guidebooks').select("count").execute()
-            if not guidebooks_response.data or guidebooks_response.data[0]['count'] == 0:
-                # Add sample guidebooks
-                guidebooks_data = [
-                    {
-                        "title": "Reducing Food Waste in Food Banks",
-                        "description": "A comprehensive guide to minimizing food waste in food bank operations",
-                        "steps": "1. Audit current waste levels\n2. Implement inventory tracking\n3. Optimize storage conditions\n4. Establish donation guidelines\n5. Train staff and volunteers",
-                        "estimated_time": "3-6 months",
-                        "difficulty_level": "Medium",
-                        "key_considerations": "Storage capacity, volunteer training needs",
-                        "resources_needed": "Inventory management system, storage containers, training materials"
-                    },
-                    {
-                        "title": "Establishing a New Food Bank",
-                        "description": "Step-by-step guide to setting up a climate-friendly food bank",
-                        "steps": "1. Community needs assessment\n2. Location selection\n3. Equipment procurement\n4. Volunteer recruitment\n5. Partnership development",
-                        "estimated_time": "6-12 months",
-                        "difficulty_level": "High",
-                        "key_considerations": "Location accessibility, storage requirements",
-                        "resources_needed": "Facility, refrigeration units, transport vehicles"
-                    }
-                ]
-                supabase.table('guidebooks').insert(guidebooks_data).execute()
-                logger.info("Sample guidebooks added to Supabase")
-            
-            logger.info("Database initialized successfully!")
+        # Check if data exists in Supabase
+        personas_response = supabase.table('persona_cards').select("count").execute()
+        if not personas_response.data or personas_response.data[0]['count'] == 0:
+            # Add sample personas
+            personas_data = [
+                {
+                    "name": "Sarah Johnson",
+                    "age": 35,
+                    "occupation": "Single Mother",
+                    "background": "Works two part-time jobs to support her family",
+                    "challenges": "Limited time for meal preparation, tight budget",
+                    "dietary_preferences": "Vegetarian",
+                    "household_size": 3,
+                    "location": "Urban",
+                    "climate_impact_concerns": "Interested in reducing food waste",
+                    "created_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat()
+                },
+                {
+                    "name": "Emma Thompson",
+                    "age": 42,
+                    "occupation": "Food Bank Manager",
+                    "background": "10 years experience in food bank operations",
+                    "challenges": "Balancing nutritional needs with available donations",
+                    "dietary_preferences": "No restrictions",
+                    "household_size": 4,
+                    "location": "Suburban",
+                    "climate_impact_concerns": "Focused on sustainable food sourcing",
+                    "created_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat()
+                },
+                {
+                    "name": "David Kumar",
+                    "age": 28,
+                    "occupation": "Graduate Student",
+                    "background": "International student on limited budget",
+                    "challenges": "Dietary restrictions, unfamiliar with local food system",
+                    "dietary_preferences": "Vegan",
+                    "household_size": 1,
+                    "location": "Urban",
+                    "climate_impact_concerns": "Passionate about reducing carbon footprint",
+                    "created_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+            ]
+            supabase.table('persona_cards').insert(personas_data).execute()
+            logger.info("Sample personas added to Supabase")
+        
+        guidebooks_response = supabase.table('guidebooks').select("count").execute()
+        if not guidebooks_response.data or guidebooks_response.data[0]['count'] == 0:
+            # Add sample guidebooks
+            guidebooks_data = [
+                {
+                    "title": "Reducing Food Waste in Food Banks",
+                    "description": "A comprehensive guide to minimizing food waste in food bank operations",
+                    "steps": "1. Audit current waste levels\n2. Implement inventory tracking\n3. Optimize storage conditions\n4. Establish donation guidelines\n5. Train staff and volunteers",
+                    "estimated_time": "3-6 months",
+                    "difficulty_level": "Medium",
+                    "key_considerations": "Storage capacity, volunteer training needs",
+                    "resources_needed": "Inventory management system, storage containers, training materials",
+                    "created_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat()
+                },
+                {
+                    "title": "Establishing a New Food Bank",
+                    "description": "Step-by-step guide to setting up a climate-friendly food bank",
+                    "steps": "1. Community needs assessment\n2. Location selection\n3. Equipment procurement\n4. Volunteer recruitment\n5. Partnership development",
+                    "estimated_time": "6-12 months",
+                    "difficulty_level": "High",
+                    "key_considerations": "Location accessibility, storage requirements",
+                    "resources_needed": "Facility, refrigeration units, transport vehicles",
+                    "created_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+            ]
+            supabase.table('guidebooks').insert(guidebooks_data).execute()
+            logger.info("Sample guidebooks added to Supabase")
+        
+        logger.info("Sample data initialization completed successfully!")
     except Exception as e:
-        logger.error(f"Error initializing database: {str(e)}")
+        logger.error(f"Error initializing sample data: {str(e)}")
         raise
 
 # Routes
@@ -204,14 +142,8 @@ def index():
 @app.route('/personas')
 def personas():
     try:
-        # Use Supabase to fetch personas
         response = supabase.table('persona_cards').select("*").execute()
-        if not response.data:
-            logger.warning("No personas found in Supabase, falling back to local database")
-            personas = PersonaCard.query.all()
-        else:
-            personas = response.data
-        return render_template('personas.html', personas=personas)
+        return render_template('personas.html', personas=response.data)
     except Exception as e:
         logger.error(f"Error in personas route: {str(e)}")
         return render_template('error.html', error=str(e)), 500
@@ -219,22 +151,19 @@ def personas():
 @app.route('/api/personas')
 def get_personas():
     try:
-        # Use Supabase to fetch personas
         response = supabase.table('persona_cards').select("*").execute()
-        return jsonify(response.data if response.data else [])
+        return jsonify(response.data)
     except Exception as e:
-        app.logger.error(f"Error in get_personas route: {str(e)}")
+        logger.error(f"Error in get_personas route: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/guidebooks')
 def guidebooks():
     try:
-        # Use Supabase to fetch guidebooks
         response = supabase.table('guidebooks').select("*").execute()
-        guidebooks = response.data if response.data else Guidebook.query.all()
-        return render_template('guidebooks.html', guidebooks=guidebooks)
+        return render_template('guidebooks.html', guidebooks=response.data)
     except Exception as e:
-        app.logger.error(f"Error in guidebooks route: {str(e)}")
+        logger.error(f"Error in guidebooks route: {str(e)}")
         return render_template('error.html', error=str(e)), 500
 
 @app.route('/process')
@@ -242,50 +171,50 @@ def process():
     try:
         return render_template('process.html')
     except Exception as e:
-        app.logger.error(f"Error in process route: {str(e)}")
+        logger.error(f"Error in process route: {str(e)}")
         return render_template('error.html', error=str(e)), 500
 
 @app.route('/api/implementation-plans', methods=['POST'])
 def create_implementation_plan():
     try:
         data = request.json
-        # Insert into Supabase
+        data['created_at'] = datetime.utcnow().isoformat()
+        data['updated_at'] = datetime.utcnow().isoformat()
         response = supabase.table('implementation_plans').insert(data).execute()
         return jsonify(response.data[0])
     except Exception as e:
-        app.logger.error(f"Error creating implementation plan: {str(e)}")
+        logger.error(f"Error creating implementation plan: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/community-feedback', methods=['POST'])
 def add_community_feedback():
     try:
         data = request.json
-        # Insert into Supabase
+        data['created_at'] = datetime.utcnow().isoformat()
         response = supabase.table('community_feedback').insert(data).execute()
         return jsonify(response.data[0])
     except Exception as e:
-        app.logger.error(f"Error adding feedback: {str(e)}")
+        logger.error(f"Error adding feedback: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/climate-impact', methods=['POST'])
 def add_climate_impact():
     try:
         data = request.json
-        # Insert into Supabase
+        data['created_at'] = datetime.utcnow().isoformat()
         response = supabase.table('climate_impacts').insert(data).execute()
         return jsonify(response.data[0])
     except Exception as e:
-        app.logger.error(f"Error adding climate impact: {str(e)}")
+        logger.error(f"Error adding climate impact: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# Initialize database
-with app.app_context():
+# Initialize sample data if running in development
+if not os.environ.get('VERCEL_ENV') == 'production':
     try:
-        db.create_all()
-        init_db()
+        init_sample_data()
     except Exception as e:
-        logger.error(f"Error during database initialization: {str(e)}")
-        print(f"Error during database initialization: {str(e)}", file=sys.stderr)
+        logger.error(f"Error during sample data initialization: {str(e)}")
+        print(f"Error during sample data initialization: {str(e)}", file=sys.stderr)
 
 if __name__ == '__main__':
     app.run(debug=True) 
