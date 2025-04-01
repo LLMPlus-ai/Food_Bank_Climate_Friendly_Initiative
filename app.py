@@ -24,7 +24,7 @@ if missing_vars:
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-secret-key-for-development')
 
-# Initialize Supabase client
+# Initialize Supabase client with minimal configuration
 try:
     url = os.getenv('SUPABASE_URL')
     key = os.getenv('SUPABASE_KEY')
