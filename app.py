@@ -46,6 +46,16 @@ def internal_error(error):
 def not_found_error(error):
     return render_template('error.html', error=str(error)), 404
 
+def check_table_exists(table_name):
+    try:
+        # Try to select a single row from the table
+        response = supabase.table(table_name).select('*').limit(1).execute()
+        return True
+    except Exception as e:
+        if 'relation' in str(e).lower() and 'does not exist' in str(e).lower():
+            return False
+        raise
+
 def init_sample_data():
     try:
         # Check if data exists in Supabase
@@ -125,6 +135,9 @@ def index():
 @app.route('/personas')
 def personas():
     try:
+        if not check_table_exists('persona_cards'):
+            return render_template('error.html', 
+                error="Database table 'persona_cards' not found. Please set up the database tables in Supabase."), 500
         response = supabase.table('persona_cards').select('*').execute()
         return render_template('personas.html', personas=response.data)
     except Exception as e:
@@ -134,6 +147,8 @@ def personas():
 @app.route('/api/personas')
 def get_personas():
     try:
+        if not check_table_exists('persona_cards'):
+            return jsonify({'error': "Database table 'persona_cards' not found. Please set up the database tables in Supabase."}), 500
         response = supabase.table('persona_cards').select('*').execute()
         return jsonify(response.data)
     except Exception as e:
@@ -143,6 +158,9 @@ def get_personas():
 @app.route('/guidebooks')
 def guidebooks():
     try:
+        if not check_table_exists('guidebooks'):
+            return render_template('error.html', 
+                error="Database table 'guidebooks' not found. Please set up the database tables in Supabase."), 500
         response = supabase.table('guidebooks').select('*').execute()
         return render_template('guidebooks.html', guidebooks=response.data)
     except Exception as e:
@@ -161,6 +179,8 @@ def process():
 @app.route('/api/implementation-plans', methods=['POST'])
 def create_implementation_plan():
     try:
+        if not check_table_exists('implementation_plans'):
+            return jsonify({'error': "Database table 'implementation_plans' not found. Please set up the database tables in Supabase."}), 500
         data = request.json
         data['created_at'] = datetime.utcnow().isoformat()
         data['updated_at'] = datetime.utcnow().isoformat()
@@ -173,6 +193,8 @@ def create_implementation_plan():
 @app.route('/api/community-feedback', methods=['POST'])
 def add_community_feedback():
     try:
+        if not check_table_exists('community_feedback'):
+            return jsonify({'error': "Database table 'community_feedback' not found. Please set up the database tables in Supabase."}), 500
         data = request.json
         data['created_at'] = datetime.utcnow().isoformat()
         response = supabase.table('community_feedback').insert(data).execute()
@@ -184,6 +206,8 @@ def add_community_feedback():
 @app.route('/api/climate-impact', methods=['POST'])
 def add_climate_impact():
     try:
+        if not check_table_exists('climate_impacts'):
+            return jsonify({'error': "Database table 'climate_impacts' not found. Please set up the database tables in Supabase."}), 500
         data = request.json
         data['created_at'] = datetime.utcnow().isoformat()
         response = supabase.table('climate_impacts').insert(data).execute()
