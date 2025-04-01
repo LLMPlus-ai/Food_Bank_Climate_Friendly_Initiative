@@ -277,11 +277,6 @@
                             <i class="fas fa-book"></i>Guidebooks
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'process' %}active{% endif %}" href="{{ url_for('process') }}">
-                            <i class="fas fa-tasks"></i>Process
-                        </a>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -303,7 +298,6 @@
                     <ul class="list-unstyled">
                         <li><a href="{{ url_for('personas') }}" class="text-white">Persona Cards</a></li>
                         <li><a href="{{ url_for('guidebooks') }}" class="text-white">Guidebooks</a></li>
-                        <li><a href="{{ url_for('process') }}" class="text-white">Implementation Process</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4 text-md-end">
