@@ -38,8 +38,9 @@
                         <select id="dietaryFilter" class="form-select">
                             <option value="">All Dietary Preferences</option>
                             <option value="Vegetarian">Vegetarian</option>
-                            <option value="Traditional">Traditional</option>
-                            <option value="Flexible">Flexible</option>
+                            <option value="Vegan">Vegan</option>
+                            <option value="No restrictions">No restrictions</option>
+                            <option value="Flexitarian">Flexitarian</option>
                         </select>
                     </div>
                 </div>
@@ -51,9 +52,9 @@
 <div class="row mt-4" id="personaCards">
     {% for persona in personas %}
     <div class="col-md-6 mb-4 persona-card" 
-         data-location="{{ persona.location.split(' ')[0] }}"
-         data-household="{{ persona.household_size.split(' ')[0] }}"
-         data-dietary="{{ persona.dietary_preferences.split(',')[0] }}">
+         data-location="{{ persona.location }}"
+         data-household="{{ persona.household_size }}"
+         data-dietary="{{ persona.dietary_preferences }}">
         <div class="card h-100">
             <div class="card-header">
                 <h5 class="card-title mb-0">{{ persona.name }}</h5>
@@ -61,20 +62,15 @@
             <div class="card-body">
                 <div class="mb-3">
                     <span class="badge bg-secondary me-2">{{ persona.location }}</span>
-                    <span class="badge bg-secondary me-2">{{ persona.household_size }}</span>
+                    <span class="badge bg-secondary me-2">Household Size: {{ persona.household_size }}</span>
+                    <span class="badge bg-secondary me-2">{{ persona.dietary_preferences }}</span>
                 </div>
                 
-                <h6 class="card-subtitle mb-2 text-muted">Profile</h6>
-                <p class="card-text">{{ persona.profile }}</p>
+                <h6 class="card-subtitle mb-2 text-muted">Background</h6>
+                <p class="card-text">{{ persona.background }}</p>
                 
-                <h6 class="card-subtitle mb-2 text-muted">Barriers to Climate-Friendly Diet</h6>
-                <p class="card-text">{{ persona.barriers }}</p>
-                
-                <h6 class="card-subtitle mb-2 text-muted">Cultural Context</h6>
-                <p class="card-text">{{ persona.cultural_context }}</p>
-                
-                <h6 class="card-subtitle mb-2 text-muted">Dietary Preferences</h6>
-                <p class="card-text">{{ persona.dietary_preferences }}</p>
+                <h6 class="card-subtitle mb-2 text-muted">Challenges</h6>
+                <p class="card-text">{{ persona.challenges }}</p>
                 
                 <h6 class="card-subtitle mb-2 text-muted">Climate Impact Concerns</h6>
                 <p class="card-text">{{ persona.climate_impact_concerns }}</p>
@@ -103,7 +99,9 @@ $(document).ready(function() {
 
             const matchesSearch = cardText.includes(searchText);
             const matchesLocation = !locationFilter || location === locationFilter;
-            const matchesHousehold = !householdFilter || household === householdFilter;
+            const matchesHousehold = !householdFilter || 
+                (householdFilter === '3+' && household >= 3) ||
+                (householdFilter === household);
             const matchesDietary = !dietaryFilter || dietary === dietaryFilter;
 
             if (matchesSearch && matchesLocation && matchesHousehold && matchesDietary) {

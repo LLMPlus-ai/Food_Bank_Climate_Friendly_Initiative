@@ -190,11 +190,14 @@ def guidebooks():
         # Process guidebooks data
         processed_guidebooks = []
         for guidebook in guidebooks:
+            # Parse the steps JSONB into a list
+            steps = json.loads(guidebook['steps']) if isinstance(guidebook['steps'], str) else guidebook['steps']
+            
             processed_guidebook = {
                 'id': guidebook['id'],
                 'title': guidebook['title'],
                 'description': guidebook['description'],
-                'steps': guidebook['steps'],
+                'steps': steps,
                 'estimated_time': guidebook['estimated_time'],
                 'difficulty_level': guidebook['difficulty_level'],
                 'key_considerations': guidebook['key_considerations'],
