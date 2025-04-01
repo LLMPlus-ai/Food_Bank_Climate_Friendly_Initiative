@@ -2,17 +2,20 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
+import sys
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-secret-key-for-development')
 
-# Use SQLite for development and PostgreSQL for production
+# Use SQLite for development and in-memory SQLite for production
 if os.environ.get('VERCEL_ENV') == 'production':
-    # For Vercel deployment, use SQLite in memory
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['PROPAGATE_EXCEPTIONS'] = True  # Show errors in production
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///foodbank.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 class PersonaCard(db.Model):
@@ -69,111 +72,145 @@ class ClimateImpact(db.Model):
     date_measured = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# Error handling
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f'Server Error: {error}')
+    return render_template('error.html', error=error), 500
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('error.html', error=error), 404
+
 def init_db():
-    with app.app_context():
-        # Drop all tables
-        db.drop_all()
-        # Create all tables
-        db.create_all()
-        
-        # Add sample personas
-        personas = [
-            PersonaCard(
-                name="Sarah Johnson",
-                age=35,
-                occupation="Single Mother",
-                background="Works two part-time jobs to support her family",
-                challenges="Limited time for meal preparation, tight budget",
-                dietary_preferences="Vegetarian",
-                household_size=3,
-                location="Urban",
-                climate_impact_concerns="Interested in reducing food waste"
-            ),
-            PersonaCard(
-                name="Emma Thompson",
-                age=42,
-                occupation="Food Bank Manager",
-                background="10 years experience in food bank operations",
-                challenges="Balancing nutritional needs with available donations",
-                dietary_preferences="No restrictions",
-                household_size=4,
-                location="Suburban",
-                climate_impact_concerns="Focused on sustainable food sourcing"
-            ),
-            PersonaCard(
-                name="David Kumar",
-                age=28,
-                occupation="Graduate Student",
-                background="International student on limited budget",
-                challenges="Dietary restrictions, unfamiliar with local food system",
-                dietary_preferences="Vegan",
-                household_size=1,
-                location="Urban",
-                climate_impact_concerns="Passionate about reducing carbon footprint"
-            )
-        ]
-        
-        # Add sample guidebooks
-        guidebooks = [
-            Guidebook(
-                title="Reducing Food Waste in Food Banks",
-                description="A comprehensive guide to minimizing food waste in food bank operations",
-                steps="1. Audit current waste levels\n2. Implement inventory tracking\n3. Optimize storage conditions\n4. Establish donation guidelines\n5. Train staff and volunteers",
-                estimated_time="3-6 months",
-                difficulty_level="Medium",
-                key_considerations="Storage capacity, volunteer training needs",
-                resources_needed="Inventory management system, storage containers, training materials"
-            ),
-            Guidebook(
-                title="Establishing a New Food Bank",
-                description="Step-by-step guide to setting up a climate-friendly food bank",
-                steps="1. Community needs assessment\n2. Location selection\n3. Equipment procurement\n4. Volunteer recruitment\n5. Partnership development",
-                estimated_time="6-12 months",
-                difficulty_level="High",
-                key_considerations="Location accessibility, storage requirements",
-                resources_needed="Facility, refrigeration units, transport vehicles"
-            )
-        ]
-        
-        db.session.add_all(personas)
-        db.session.add_all(guidebooks)
-        db.session.commit()
-        print("Database initialized successfully!")
+    try:
+        with app.app_context():
+            # Drop all tables
+            db.drop_all()
+            # Create all tables
+            db.create_all()
+            
+            # Add sample personas
+            personas = [
+                PersonaCard(
+                    name="Sarah Johnson",
+                    age=35,
+                    occupation="Single Mother",
+                    background="Works two part-time jobs to support her family",
+                    challenges="Limited time for meal preparation, tight budget",
+                    dietary_preferences="Vegetarian",
+                    household_size=3,
+                    location="Urban",
+                    climate_impact_concerns="Interested in reducing food waste"
+                ),
+                PersonaCard(
+                    name="Emma Thompson",
+                    age=42,
+                    occupation="Food Bank Manager",
+                    background="10 years experience in food bank operations",
+                    challenges="Balancing nutritional needs with available donations",
+                    dietary_preferences="No restrictions",
+                    household_size=4,
+                    location="Suburban",
+                    climate_impact_concerns="Focused on sustainable food sourcing"
+                ),
+                PersonaCard(
+                    name="David Kumar",
+                    age=28,
+                    occupation="Graduate Student",
+                    background="International student on limited budget",
+                    challenges="Dietary restrictions, unfamiliar with local food system",
+                    dietary_preferences="Vegan",
+                    household_size=1,
+                    location="Urban",
+                    climate_impact_concerns="Passionate about reducing carbon footprint"
+                )
+            ]
+            
+            # Add sample guidebooks
+            guidebooks = [
+                Guidebook(
+                    title="Reducing Food Waste in Food Banks",
+                    description="A comprehensive guide to minimizing food waste in food bank operations",
+                    steps="1. Audit current waste levels\n2. Implement inventory tracking\n3. Optimize storage conditions\n4. Establish donation guidelines\n5. Train staff and volunteers",
+                    estimated_time="3-6 months",
+                    difficulty_level="Medium",
+                    key_considerations="Storage capacity, volunteer training needs",
+                    resources_needed="Inventory management system, storage containers, training materials"
+                ),
+                Guidebook(
+                    title="Establishing a New Food Bank",
+                    description="Step-by-step guide to setting up a climate-friendly food bank",
+                    steps="1. Community needs assessment\n2. Location selection\n3. Equipment procurement\n4. Volunteer recruitment\n5. Partnership development",
+                    estimated_time="6-12 months",
+                    difficulty_level="High",
+                    key_considerations="Location accessibility, storage requirements",
+                    resources_needed="Facility, refrigeration units, transport vehicles"
+                )
+            ]
+            
+            db.session.add_all(personas)
+            db.session.add_all(guidebooks)
+            db.session.commit()
+            app.logger.info("Database initialized successfully!")
+    except Exception as e:
+        app.logger.error(f"Error initializing database: {str(e)}")
+        raise
 
 # Routes
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        app.logger.error(f"Error in index route: {str(e)}")
+        return render_template('error.html', error=str(e)), 500
 
 @app.route('/personas')
 def personas():
-    personas = PersonaCard.query.all()
-    return render_template('personas.html', personas=personas)
+    try:
+        personas = PersonaCard.query.all()
+        return render_template('personas.html', personas=personas)
+    except Exception as e:
+        app.logger.error(f"Error in personas route: {str(e)}")
+        return render_template('error.html', error=str(e)), 500
 
 @app.route('/api/personas')
 def get_personas():
-    personas = PersonaCard.query.all()
-    return jsonify([{
-        'id': p.id,
-        'name': p.name,
-        'age': p.age,
-        'occupation': p.occupation,
-        'background': p.background,
-        'challenges': p.challenges,
-        'dietary_preferences': p.dietary_preferences,
-        'household_size': p.household_size,
-        'location': p.location,
-        'climate_impact_concerns': p.climate_impact_concerns
-    } for p in personas])
+    try:
+        personas = PersonaCard.query.all()
+        return jsonify([{
+            'id': p.id,
+            'name': p.name,
+            'age': p.age,
+            'occupation': p.occupation,
+            'background': p.background,
+            'challenges': p.challenges,
+            'dietary_preferences': p.dietary_preferences,
+            'household_size': p.household_size,
+            'location': p.location,
+            'climate_impact_concerns': p.climate_impact_concerns
+        } for p in personas])
+    except Exception as e:
+        app.logger.error(f"Error in get_personas route: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/guidebooks')
 def guidebooks():
-    guidebooks = Guidebook.query.all()
-    return render_template('guidebooks.html', guidebooks=guidebooks)
+    try:
+        guidebooks = Guidebook.query.all()
+        return render_template('guidebooks.html', guidebooks=guidebooks)
+    except Exception as e:
+        app.logger.error(f"Error in guidebooks route: {str(e)}")
+        return render_template('error.html', error=str(e)), 500
 
 @app.route('/process')
 def process():
-    return render_template('process.html')
+    try:
+        return render_template('process.html')
+    except Exception as e:
+        app.logger.error(f"Error in process route: {str(e)}")
+        return render_template('error.html', error=str(e)), 500
 
 @app.route('/api/implementation-plans', methods=['POST'])
 def create_implementation_plan():
@@ -216,14 +253,16 @@ def add_climate_impact():
     db.session.commit()
     return jsonify({'id': impact.id, 'message': 'Climate impact data added successfully'})
 
-# Initialize database if running locally
-if __name__ == '__main__':
-    init_db()
-    app.run(debug=True)
-else:
-    # Initialize database for production
-    with app.app_context():
+# Initialize database
+with app.app_context():
+    try:
         db.create_all()
         # Only add sample data if tables are empty
         if not PersonaCard.query.first() and not Guidebook.query.first():
-            init_db() 
+            init_db()
+    except Exception as e:
+        app.logger.error(f"Error during database initialization: {str(e)}")
+        print(f"Error during database initialization: {str(e)}", file=sys.stderr)
+
+if __name__ == '__main__':
+    app.run(debug=True) 
