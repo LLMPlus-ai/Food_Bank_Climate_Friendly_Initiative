@@ -5,6 +5,7 @@ import sys
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import logging
+import httpx
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -23,11 +24,16 @@ if missing_vars:
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-secret-key-for-development')
 
-# Initialize Supabase client
+# Initialize Supabase client with custom options for Vercel
 try:
     supabase: Client = create_client(
         supabase_url=os.getenv('SUPABASE_URL'),
-        supabase_key=os.getenv('SUPABASE_KEY')
+        supabase_key=os.getenv('SUPABASE_KEY'),
+        options={
+            'headers': {
+                'X-Client-Info': 'supabase-flask/1.0.0'
+            }
+        }
     )
     # Test the connection
     response = supabase.table('persona_cards').select("count").execute()
