@@ -146,6 +146,9 @@ def init_sample_data():
 @app.route('/')
 def index():
     try:
+        # Check and initialize database if needed
+        if not check_table_exists('persona_cards'):
+            init_database()
         return render_template('index.html')
     except Exception as e:
         logger.error(f"Error in index route: {str(e)}")
@@ -232,16 +235,6 @@ def add_climate_impact():
     except Exception as e:
         logger.error(f"Error adding climate impact: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
-# Initialize database if needed
-@app.before_first_request
-def setup_database():
-    try:
-        if not check_table_exists('persona_cards'):
-            init_database()
-    except Exception as e:
-        logger.error(f"Error during database initialization: {str(e)}")
-        print(f"Error during database initialization: {str(e)}", file=sys.stderr)
 
 # This is the entry point for Vercel
 app = app 
