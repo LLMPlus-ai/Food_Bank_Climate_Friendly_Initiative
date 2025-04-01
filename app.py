@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from supabase import create_client
 import logging
 import json
+import sys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +55,24 @@ def check_table_exists(table_name):
     except Exception as e:
         if 'relation' in str(e).lower() and 'does not exist' in str(e).lower():
             return False
+        raise
+
+def init_database():
+    """Initialize the database with required tables and sample data."""
+    try:
+        # Read the SQL setup file
+        with open('supabase_setup.sql', 'r') as file:
+            sql_commands = file.read()
+
+        # Execute the SQL commands
+        supabase.rpc('exec_sql', {'sql': sql_commands}).execute()
+        logger.info("Database tables created successfully")
+
+        # Initialize sample data
+        init_sample_data()
+        logger.info("Sample data initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing database: {str(e)}")
         raise
 
 def init_sample_data():
@@ -136,8 +155,7 @@ def index():
 def personas():
     try:
         if not check_table_exists('persona_cards'):
-            return render_template('error.html', 
-                error="Database table 'persona_cards' not found. Please set up the database tables in Supabase."), 500
+            init_database()
         response = supabase.table('persona_cards').select('*').execute()
         return render_template('personas.html', personas=response.data)
     except Exception as e:
@@ -148,7 +166,7 @@ def personas():
 def get_personas():
     try:
         if not check_table_exists('persona_cards'):
-            return jsonify({'error': "Database table 'persona_cards' not found. Please set up the database tables in Supabase."}), 500
+            init_database()
         response = supabase.table('persona_cards').select('*').execute()
         return jsonify(response.data)
     except Exception as e:
@@ -159,8 +177,7 @@ def get_personas():
 def guidebooks():
     try:
         if not check_table_exists('guidebooks'):
-            return render_template('error.html', 
-                error="Database table 'guidebooks' not found. Please set up the database tables in Supabase."), 500
+            init_database()
         response = supabase.table('guidebooks').select('*').execute()
         return render_template('guidebooks.html', guidebooks=response.data)
     except Exception as e:
@@ -180,7 +197,7 @@ def process():
 def create_implementation_plan():
     try:
         if not check_table_exists('implementation_plans'):
-            return jsonify({'error': "Database table 'implementation_plans' not found. Please set up the database tables in Supabase."}), 500
+            init_database()
         data = request.json
         data['created_at'] = datetime.utcnow().isoformat()
         data['updated_at'] = datetime.utcnow().isoformat()
@@ -194,7 +211,7 @@ def create_implementation_plan():
 def add_community_feedback():
     try:
         if not check_table_exists('community_feedback'):
-            return jsonify({'error': "Database table 'community_feedback' not found. Please set up the database tables in Supabase."}), 500
+            init_database()
         data = request.json
         data['created_at'] = datetime.utcnow().isoformat()
         response = supabase.table('community_feedback').insert(data).execute()
@@ -207,7 +224,7 @@ def add_community_feedback():
 def add_climate_impact():
     try:
         if not check_table_exists('climate_impacts'):
-            return jsonify({'error': "Database table 'climate_impacts' not found. Please set up the database tables in Supabase."}), 500
+            init_database()
         data = request.json
         data['created_at'] = datetime.utcnow().isoformat()
         response = supabase.table('climate_impacts').insert(data).execute()
@@ -216,13 +233,15 @@ def add_climate_impact():
         logger.error(f"Error adding climate impact: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# Initialize sample data if running in development
-if not os.environ.get('VERCEL_ENV') == 'production':
+# Initialize database if needed
+@app.before_first_request
+def setup_database():
     try:
-        init_sample_data()
+        if not check_table_exists('persona_cards'):
+            init_database()
     except Exception as e:
-        logger.error(f"Error during sample data initialization: {str(e)}")
-        print(f"Error during sample data initialization: {str(e)}", file=sys.stderr)
+        logger.error(f"Error during database initialization: {str(e)}")
+        print(f"Error during database initialization: {str(e)}", file=sys.stderr)
 
 # This is the entry point for Vercel
 app = app 
