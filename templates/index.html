@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title text-center mb-4">Welcome to the Food Bank Climate-Friendly Initiative</h1>
+                <p class="lead text-center">A simple tool to help food bank managers become more climate-friendly without negative financial or social impacts.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Persona Cards</h5>
+                <p class="card-text">Explore fictionalized profiles of food bank users, understanding their cultural, household, and socioeconomic contexts.</p>
+                <a href="{{ url_for('personas') }}" class="btn btn-primary">View Personas</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Guidebooks</h5>
+                <p class="card-text">Access practical guides for implementing climate-friendly initiatives in your food bank.</p>
+                <a href="{{ url_for('guidebooks') }}" class="btn btn-primary">View Guidebooks</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Process</h5>
+                <p class="card-text">Learn the step-by-step process for implementing climate-friendly changes in your food bank.</p>
+                <a href="{{ url_for('process') }}" class="btn btn-primary">View Process</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">How It Works</h5>
+                <ol class="list-group list-group-numbered">
+                    <li class="list-group-item">Select your objectives and choose the appropriate guidebook</li>
+                    <li class="list-group-item">Review relevant persona cards to understand your community's needs</li>
+                    <li class="list-group-item">Use the guidebook to create your implementation plan</li>
+                    <li class="list-group-item">Review and adapt your plan with community members</li>
+                    <li class="list-group-item">Implement your climate-friendly initiatives</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

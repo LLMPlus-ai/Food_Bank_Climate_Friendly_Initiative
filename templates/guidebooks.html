@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Guidebooks</h2>
+                <p class="card-text">Access practical guides for implementing climate-friendly initiatives in your food bank.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search guidebooks...">
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="d-flex gap-2">
+                        <select id="difficultyFilter" class="form-select">
+                            <option value="">All Difficulty Levels</option>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                        <select id="timeFilter" class="form-select">
+                            <option value="">All Timeframes</option>
+                            <option value="1-3">1-3 months</option>
+                            <option value="3-6">3-6 months</option>
+                            <option value="6+">6+ months</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4" id="guidebookCards">
+    {% for guidebook in guidebooks %}
+    <div class="col-md-6 mb-4 guidebook-card" 
+         data-difficulty="{{ guidebook.difficulty_level }}"
+         data-time="{{ guidebook.estimated_time.split('-')[0] }}">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{{ guidebook.title }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="badge bg-secondary me-2">
+                        <i class="fas fa-clock me-1"></i>{{ guidebook.estimated_time }}
+                    </span>
+                    <span class="badge bg-secondary me-2">
+                        <i class="fas fa-signal me-1"></i>{{ guidebook.difficulty_level }}
+                    </span>
+                </div>
+
+                <h6 class="card-subtitle mb-2 text-muted">Description</h6>
+                <p class="card-text">{{ guidebook.description }}</p>
+                
+                <h6 class="card-subtitle mb-2 text-muted">Key Considerations</h6>
+                <p class="card-text">{{ guidebook.key_considerations }}</p>
+                
+                <h6 class="card-subtitle mb-2 text-muted">Resources Needed</h6>
+                <p class="card-text">{{ guidebook.resources_needed }}</p>
+                
+                <h6 class="card-subtitle mb-2 text-muted">Implementation Steps</h6>
+                <div class="steps-list">
+                    {% for step in guidebook.steps.split('\n') %}
+                    <div class="step-item mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        {{ step }}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-4">
+                    <button class="btn btn-primary" onclick="showImplementationPlan('{{ guidebook.id }}')">
+                        <i class="fas fa-clipboard-list me-2"></i>Create Implementation Plan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Implementation Plan Modal -->
+<div class="modal fade" id="implementationPlanModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Implementation Plan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="implementationPlanForm">
+                    <div class="mb-3">
+                        <label class="form-label">Project Name</label>
+                        <input type="text" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Timeline</label>
+                        <input type="text" class="form-control" placeholder="e.g., 3 months" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Key Stakeholders</label>
+                        <textarea class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Resources Required</label>
+                        <textarea class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Success Metrics</label>
+                        <textarea class="form-control" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveImplementationPlan()">Save Plan</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    function filterGuidebooks() {
+        const searchText = $('#searchInput').val().toLowerCase();
+        const difficultyFilter = $('#difficultyFilter').val();
+        const timeFilter = $('#timeFilter').val();
+
+        $('.guidebook-card').each(function() {
+            const card = $(this);
+            const cardText = card.text().toLowerCase();
+            const difficulty = card.data('difficulty');
+            const time = card.data('time');
+
+            const matchesSearch = cardText.includes(searchText);
+            const matchesDifficulty = !difficultyFilter || difficulty === difficultyFilter;
+            const matchesTime = !timeFilter || time === timeFilter;
+
+            if (matchesSearch && matchesDifficulty && matchesTime) {
+                card.show();
+            } else {
+                card.hide();
+            }
+        });
+    }
+
+    $('#searchInput, #difficultyFilter, #timeFilter').on('input change', filterGuidebooks);
+});
+
+function showImplementationPlan(guidebookId) {
+    const modal = new bootstrap.Modal(document.getElementById('implementationPlanModal'));
+    modal.show();
+}
+
+function saveImplementationPlan() {
+    // Here you would typically save the implementation plan to a database
+    alert('Implementation plan saved successfully!');
+    const modal = bootstrap.Modal.getInstance(document.getElementById('implementationPlanModal'));
+    modal.hide();
+}
+</script>
+{% endblock %} 
