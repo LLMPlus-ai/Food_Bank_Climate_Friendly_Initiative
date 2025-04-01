@@ -1,9 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime
 import os
-import sys
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from supabase import create_client
 import logging
 import json
 
@@ -14,26 +13,27 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Verify environment variables
-required_env_vars = ['SUPABASE_URL', 'SUPABASE_KEY']
-missing_vars = [var for var in required_env_vars if not os.getenv(var)]
-if missing_vars:
-    logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
-    raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
-
+# Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-secret-key-for-development')
 
-# Initialize Supabase client with minimal configuration
+# Initialize Supabase client
+def get_supabase_client():
+    try:
+        url = os.getenv('SUPABASE_URL')
+        key = os.getenv('SUPABASE_KEY')
+        if not url or not key:
+            raise ValueError("Missing Supabase credentials")
+        return create_client(url, key)
+    except Exception as e:
+        logger.error(f"Failed to initialize Supabase client: {str(e)}")
+        raise
+
+# Create Supabase client
 try:
-    url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY')
-    supabase = create_client(url, key)
-    # Test the connection with a simple query
-    response = supabase.table('persona_cards').select('count').execute()
-    logger.info("Successfully connected to Supabase!")
+    supabase = get_supabase_client()
+    logger.info("Successfully initialized Supabase client")
 except Exception as e:
-    logger.error(f"Failed to connect to Supabase: {str(e)}")
+    logger.error(f"Failed to create Supabase client: {str(e)}")
     raise
 
 # Error handling
