@@ -325,7 +325,6 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <script>
-        // Global functions for showing/hiding loading spinner
         function showLoading() {
             $('.loading-spinner').fadeIn();
         }
@@ -334,7 +333,6 @@
             $('.loading-spinner').fadeOut();
         }
         
-        // Global function for showing toast notifications
         function showToast(message, type = 'success') {
             const toast = $(`
                 <div class="toast" role="alert">
@@ -358,7 +356,6 @@
             });
         }
         
-        // Initialize tooltips
         $(function() {
             $('[data-bs-toggle="tooltip"]').tooltip();
         });
