@@ -17,6 +17,7 @@ load_dotenv()
 required_env_vars = ['SUPABASE_URL', 'SUPABASE_KEY']
 missing_vars = [var for var in required_env_vars if not os.getenv(var)]
 if missing_vars:
+    logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
     raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 app = Flask(__name__)
@@ -39,11 +40,11 @@ except Exception as e:
 @app.errorhandler(500)
 def internal_error(error):
     logger.error(f'Server Error: {error}')
-    return render_template('error.html', error=error), 500
+    return render_template('error.html', error=str(error)), 500
 
 @app.errorhandler(404)
 def not_found_error(error):
-    return render_template('error.html', error=error), 404
+    return render_template('error.html', error=str(error)), 404
 
 def init_sample_data():
     try:
@@ -216,5 +217,5 @@ if not os.environ.get('VERCEL_ENV') == 'production':
         logger.error(f"Error during sample data initialization: {str(e)}")
         print(f"Error during sample data initialization: {str(e)}", file=sys.stderr)
 
-if __name__ == '__main__':
-    app.run(debug=True) 
+# This is the entry point for Vercel
+app = app 
