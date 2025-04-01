@@ -5,7 +5,7 @@ import sys
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import logging
-import httpx
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,19 +24,13 @@ if missing_vars:
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-secret-key-for-development')
 
-# Initialize Supabase client with custom options for Vercel
+# Initialize Supabase client
 try:
-    supabase: Client = create_client(
-        supabase_url=os.getenv('SUPABASE_URL'),
-        supabase_key=os.getenv('SUPABASE_KEY'),
-        options={
-            'headers': {
-                'X-Client-Info': 'supabase-flask/1.0.0'
-            }
-        }
-    )
-    # Test the connection
-    response = supabase.table('persona_cards').select("count").execute()
+    url = os.getenv('SUPABASE_URL')
+    key = os.getenv('SUPABASE_KEY')
+    supabase = create_client(url, key)
+    # Test the connection with a simple query
+    response = supabase.table('persona_cards').select('count').execute()
     logger.info("Successfully connected to Supabase!")
 except Exception as e:
     logger.error(f"Failed to connect to Supabase: {str(e)}")
@@ -55,7 +49,7 @@ def not_found_error(error):
 def init_sample_data():
     try:
         # Check if data exists in Supabase
-        personas_response = supabase.table('persona_cards').select("count").execute()
+        personas_response = supabase.table('persona_cards').select('count').execute()
         if not personas_response.data or personas_response.data[0]['count'] == 0:
             # Add sample personas
             personas_data = [
@@ -84,47 +78,29 @@ def init_sample_data():
                     "climate_impact_concerns": "Focused on sustainable food sourcing",
                     "created_at": datetime.utcnow().isoformat(),
                     "updated_at": datetime.utcnow().isoformat()
-                },
-                {
-                    "name": "David Kumar",
-                    "age": 28,
-                    "occupation": "Graduate Student",
-                    "background": "International student on limited budget",
-                    "challenges": "Dietary restrictions, unfamiliar with local food system",
-                    "dietary_preferences": "Vegan",
-                    "household_size": 1,
-                    "location": "Urban",
-                    "climate_impact_concerns": "Passionate about reducing carbon footprint",
-                    "created_at": datetime.utcnow().isoformat(),
-                    "updated_at": datetime.utcnow().isoformat()
                 }
             ]
             supabase.table('persona_cards').insert(personas_data).execute()
             logger.info("Sample personas added to Supabase")
-        
-        guidebooks_response = supabase.table('guidebooks').select("count").execute()
+
+        guidebooks_response = supabase.table('guidebooks').select('count').execute()
         if not guidebooks_response.data or guidebooks_response.data[0]['count'] == 0:
             # Add sample guidebooks
             guidebooks_data = [
                 {
                     "title": "Reducing Food Waste in Food Banks",
                     "description": "A comprehensive guide to minimizing food waste in food bank operations",
-                    "steps": "1. Audit current waste levels\n2. Implement inventory tracking\n3. Optimize storage conditions\n4. Establish donation guidelines\n5. Train staff and volunteers",
+                    "steps": json.dumps([
+                        "Audit current waste levels",
+                        "Implement inventory tracking",
+                        "Optimize storage conditions",
+                        "Establish donation guidelines",
+                        "Train staff and volunteers"
+                    ]),
                     "estimated_time": "3-6 months",
                     "difficulty_level": "Medium",
                     "key_considerations": "Storage capacity, volunteer training needs",
                     "resources_needed": "Inventory management system, storage containers, training materials",
-                    "created_at": datetime.utcnow().isoformat(),
-                    "updated_at": datetime.utcnow().isoformat()
-                },
-                {
-                    "title": "Establishing a New Food Bank",
-                    "description": "Step-by-step guide to setting up a climate-friendly food bank",
-                    "steps": "1. Community needs assessment\n2. Location selection\n3. Equipment procurement\n4. Volunteer recruitment\n5. Partnership development",
-                    "estimated_time": "6-12 months",
-                    "difficulty_level": "High",
-                    "key_considerations": "Location accessibility, storage requirements",
-                    "resources_needed": "Facility, refrigeration units, transport vehicles",
                     "created_at": datetime.utcnow().isoformat(),
                     "updated_at": datetime.utcnow().isoformat()
                 }
@@ -149,7 +125,7 @@ def index():
 @app.route('/personas')
 def personas():
     try:
-        response = supabase.table('persona_cards').select("*").execute()
+        response = supabase.table('persona_cards').select('*').execute()
         return render_template('personas.html', personas=response.data)
     except Exception as e:
         logger.error(f"Error in personas route: {str(e)}")
@@ -158,7 +134,7 @@ def personas():
 @app.route('/api/personas')
 def get_personas():
     try:
-        response = supabase.table('persona_cards').select("*").execute()
+        response = supabase.table('persona_cards').select('*').execute()
         return jsonify(response.data)
     except Exception as e:
         logger.error(f"Error in get_personas route: {str(e)}")
@@ -167,7 +143,7 @@ def get_personas():
 @app.route('/guidebooks')
 def guidebooks():
     try:
-        response = supabase.table('guidebooks').select("*").execute()
+        response = supabase.table('guidebooks').select('*').execute()
         return render_template('guidebooks.html', guidebooks=response.data)
     except Exception as e:
         logger.error(f"Error in guidebooks route: {str(e)}")
@@ -181,6 +157,7 @@ def process():
         logger.error(f"Error in process route: {str(e)}")
         return render_template('error.html', error=str(e)), 500
 
+# API routes
 @app.route('/api/implementation-plans', methods=['POST'])
 def create_implementation_plan():
     try:
