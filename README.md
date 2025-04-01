@@ -78,8 +78,3 @@ food-bank-climate/
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Contact
-
-For more information, please contact:
-- Email: info@foodbankclimate.org
-- Phone: +1 (555) 123-4567 
